@@ -50,3 +50,6 @@ options:
   --binary-mask         Plot class prediction (True) or probabilistic prediction (False)
   --threshold           Threshhold for pixel binary classification (only if --binary-mask is True)
 ```
+
+## Results
+Results of test subset on pretrained model in data/prediction
