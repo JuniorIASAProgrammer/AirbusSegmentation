@@ -1,0 +1,4 @@
+airbus_env/
+data/train_v2/
+data/train_ship_segmentations_v2.csv/
+data/train_grouped_selected_ships.csv
