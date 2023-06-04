@@ -38,7 +38,7 @@ options:
 ```console
 > python evaluate.py 
 usage: evaluate.py [-h] [--image-path] [--batch-size] [--model-path]
-                [--binary-mask] [--threshold]
+                   [--binary-mask] [--threshold]
 
 Predict masks with U-Net on images
 
@@ -51,5 +51,11 @@ options:
   --threshold           Threshhold for pixel binary classification (only if --binary-mask is True)
 ```
 
-## Results
-Results of test subset on pretrained model in data/prediction
+## Conclusions
+To solve this Segmentation task u-net CNN model was implemented. Labels were encoded in (start-run) format, so they needed to be preprocessed to 2D masks 0 or 1 pixels value (not-ship and ship). The dataset of images was pretty large (bigger than memory size of computing machine) so it was necessary to implement generators that scan images and pass them to model by batches. To make data more diverse, ImageDataGeterator was applied with some randoms shifts and flips to both original images and corresponding masks.  
+
+Training process: GPU P100 on kaggle platform  
+
+Metrics: dice and IOU
+
+Results of test subset on pretrained model in **data/prediction**
