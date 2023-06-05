@@ -10,8 +10,10 @@ def get_args():
     parser.add_argument('--epochs', type=int, default=10, help='Number of epochs')
     parser.add_argument('--batch-size', dest='batch_size', type=int, default=32, help='Batch size')
     parser.add_argument('--learning-rate', type=float, default=1e-3, help='Learning rate', dest='learning_rate')
-    parser.add_argument('--save-model-path', dest='save_model_path', type=str, default="models/unet_v1", help='Path to save fitted model')
-    parser.add_argument('--augmentation', type=str, default=True, help='Apply data augmentation')
+    parser.add_argument('--save-model-folder', dest='save_model_path', type=str, default="unet_v1", help='Folder name to save fitted model in models/{--save-model-folder} directory')
+    parser.add_argument('--augmentation', type=str, default=False, help='Apply data augmentation with ImageDataGenerator')
+    parser.add_argument('--aug-batch-size', dest='aug_batch_size', type=int, default=16, help='Batch of ImageDataGenerator')
+    parser.add_argument('--aug-iterations', dest='aug_iterations', type=int, default=2, help='Number of generated augmented batches from the batch ImageDataGenerator was fitted')
 
     return parser.parse_args()
 
@@ -24,16 +26,16 @@ if __name__ == '__main__':
                                      augmentation=args.augmentation,
                                      batch_size=args.batch_size, 
                                      epochs=args.epochs, 
-                                     aug_batch_size=args.batch_size//2)
+                                     aug_batch_size=args.aug_batch_size,
+                                     aug_iterations=args.aug_iterations)
     # Create U-net
     unet = unet_model()
     unet.compile(optimizer=Adam(learning_rate=args.learning_rate),
                 loss='binary_crossentropy',
                 metrics=[dice_coef, iou_coef])
     unet.summary()
-    ITERATIONS_PER_EPOCHS = (TOTAL_IMAGES//args.batch_size+1)*4
-    model_history = unet.fit(train_generator, steps_per_epoch=ITERATIONS_PER_EPOCHS, verbose=1)          
-    unet.save(args.save_model_path)
+    model_history = unet.fit(train_generator, verbose=1)          
+    unet.save(f"models/{args.save_model_path}")
     print(f"Fit loss - {model_history.history['loss']}")
     print(f"Fit dice - {model_history.history['dice_coef']}")
     print(f"Fit IOU - {model_history.history['iou_coef']}")

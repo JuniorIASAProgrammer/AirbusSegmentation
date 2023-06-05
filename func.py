@@ -14,8 +14,8 @@ def preprocess_labels(label_csv):
     unique_ships_selected = unique_ships[unique_ships['EncodedPixels']!="none"]
     return unique_ships_selected
 
-# convert EncodedPixels into 2d masks
 def mask_converter(values):
+    """Function to convert EncodedPixels in (start-run) format into 2d binary masks"""
     mask = np.zeros((768*768,), dtype=float)        #create empty one-dimentional vector with zeros
     if values != "none":
         values = values.strip().split()
@@ -45,14 +45,15 @@ def iou_coef(y_true, y_pred, smooth=1):
 def iou_loss(y_true, y_pred):
     return -iou_coef(y_true, y_pred)
 
-def data_generator(csv_data_file, image_folder_path, batch_size, epochs, augmentation=False, aug_batch_size=32):              
+# generator to organize dataflow to training process
+def data_generator(csv_data_file, image_folder_path, batch_size, epochs, aug_iterations=4, augmentation=False, aug_batch_size=32):              
     """
-    Yields the next data batch.
+    Create generaor to flow data into fit process by batches. Also ImageDataGenerator can be applied to create new image-mask pairs
     """
     labels_file = pd.read_csv(csv_data_file)
     num_images = len(labels_file)
     for i in range(epochs):
-        for offset in range(0, batch_size, batch_size):        
+        for offset in range(0, num_images, batch_size):        
             # Get the samples you'll use in this batch
             batch_images = labels_file['ImageId'][offset:offset+batch_size].values
             batch_masks = labels_file['EncodedPixels'][offset:offset+batch_size].values
@@ -87,7 +88,7 @@ def data_generator(csv_data_file, image_folder_path, batch_size, epochs, augment
                 mask_gen.fit(y_train)
                 counter = 0
                 for X_aug_train, y_aug_train in zip(image_gen.flow(X_train, batch_size=aug_batch_size, seed=42), mask_gen.flow(y_train, batch_size=aug_batch_size, seed=42)):
-                    if counter == 4:
+                    if counter == aug_iterations:
                         counter = 0
                         break
                     counter += 1
@@ -96,10 +97,10 @@ def data_generator(csv_data_file, image_folder_path, batch_size, epochs, augment
                 yield X_train, y_train
                 # yield the next training batch
 
-# initializing U-net model
 def unet_model(input_size=(256,256,3)):
+    """Initializing u-net model"""
     inputs = Input(input_size)
-
+    # upsampling
     c1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(inputs)
     c1 = Dropout(0.1)(c1)
     c1 = Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c1)
@@ -123,7 +124,7 @@ def unet_model(input_size=(256,256,3)):
     c5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(p4)
     c5 = Dropout(0.3)(c5)
     c5 = Conv2D(256, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(c5)
-
+    # downsampling
     u6 = Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(c5)
     u6 = concatenate([u6, c4])
     c6 = Conv2D(128, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(u6)

@@ -17,38 +17,40 @@ Note : Use Python 3.6 or newer
 
 ```console
 > python train.py -h
-usage: train.py [-h] [--epochs] [--batch-size] [--learning-rate]
-                [--image-path] [--label-path] [--save-model-path] [--augmentation]
+usage: train.py [-h] [--image-path] [--label-path] [--epochs]
+                [--batch-size] [--learning-rate] [--save-model-path] [--augmentation] [--aug-batch-size] [--aug-iterations]
 
 Train the U-Net on images
 
 options:
-  -h, --help            show this help message and exit
+  -h, --help            show this help message
   --image-path          Folder with train images
   --label-path          Path to .csv file
   --epochs              Number of epochs
   --batch-size          Batch size
   --learning-rate       Learning rate
-  --save-model-path     Path to save fitted model
-  --augmentation        Apply data augmentation or not
+  --save-model-folder   Folder name to save fitted model
+  --augmentation        Apply data augmentation with ImageDataGenerator (True/False)
+  --aug-batch-size      Batch of ImageDataGenerator (if --augmentation=True)
+  --aug-iterations      Number of generated augmented batches from the batch ImageDataGenerator was fitted on (if --augmentation=True)
 ```
 
 ## Evaluate
 
 ```console
 > python evaluate.py 
-usage: evaluate.py [-h] [--image-path] [--batch-size] [--model-path]
-                   [--binary-mask] [--threshold]
+usage: evaluate.py [-h] [--image-path] [--prediction-path] [--batch-size]
+                   [--model-path] [--threshold]
 
 Predict masks with U-Net on images
 
 options:
-  -h, --help            show this help message and exit
+  -h, --help            show this help message
   --image-path          Folder with train images
+  --prediction-path     Path to store predicted masks
   --batch-size          Batch size
-  --model-path          Path to model (default: pretrained)
-  --binary-mask         Plot class prediction (True) or probabilistic prediction (False)
-  --threshold           Threshhold for pixel binary classification (only if --binary-mask is True)
+  --model-path          Path to keras model
+  --threshold           Threshhold for pixel value
 ```
 
 ## Conclusions
@@ -58,4 +60,4 @@ Training process: GPU P100 on kaggle platform
 
 Metrics: dice and IOU
 
-Results of test subset on pretrained model in **data/prediction**
+Results of test subset on pretrained model in **data/prediction/prediction.png**
