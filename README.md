@@ -121,4 +121,4 @@ options:
 5) For training process GPU P100 on kaggle platform was used to accelerate learning process,
 6) Metrics: dice and IOU
 
-Results of test subset on pretrained model in **data/prediction/prediction.png**
+Results of test subset on pretrained model in **data/prediction/**
