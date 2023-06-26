@@ -34,7 +34,7 @@ pip install -r requirements.txt
 ```
 3. Download dataset from kaggle and unpack it to `data/` 
 4. Download pretrained models from Google Drive - https://drive.google.com/file/d/1QMXfO4sdurHi1h3JZFump6gPAhjpmojw/view?usp=sharing
-5. Add pretrained models to `models/` (Example : models/vgg19)
+5. Unarchive pretrained models and add to project root (Example : ../models/vgg19)
 6. To run training process:
 ```bash
 python train.py --image-path=data/train_v2 --label-path=data/train_ship_segmentations_v2.csv --use-empty=False --model-type=baseline --batch-size=32 --augmentation=True --aug-batch-size=16 --aug-iterations=3 --epochs=10 --learning-rate=0.001 --save-model-folder=train_baseline
