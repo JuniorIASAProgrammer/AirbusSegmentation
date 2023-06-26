@@ -1,18 +1,24 @@
+import os
+os.environ["SM_FRAMEWORK"] = "tf.keras"
+
 import numpy as np
 import pandas as pd
 import cv2
+import keras.backend as K
+import segmentation_models as sm
 
 from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Dropout, Conv2DTranspose, concatenate
 from tensorflow.keras import Model
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-import keras.backend as K
 
-def preprocess_labels(label_csv):
-    ships = pd.read_csv(label_csv)
-    ships['EncodedPixels'].replace(to_replace=np.nan, value="none", inplace=True)
-    unique_ships = ships.groupby('ImageId', as_index=False)['EncodedPixels'].apply(' '.join)
-    unique_ships_selected = unique_ships[unique_ships['EncodedPixels']!="none"]
-    return unique_ships_selected
+
+def get_masks(csv_data_file, use_empty_images):
+    labels = pd.read_csv(csv_data_file)
+    labels['EncodedPixels'].replace(to_replace=np.nan, value="none", inplace=True)
+    if not use_empty_images:
+        labels = labels[labels['EncodedPixels'] != 'none']    
+    grouped_labels = labels.groupby('ImageId', as_index=False)['EncodedPixels'].apply(' '.join)
+    return grouped_labels
 
 def mask_converter(values):
     """Function to convert EncodedPixels in (start-run) format into 2d binary masks"""
@@ -46,17 +52,21 @@ def iou_loss(y_true, y_pred):
     return -iou_coef(y_true, y_pred)
 
 # generator to organize dataflow to training process
-def data_generator(csv_data_file, image_folder_path, batch_size, epochs, aug_iterations=4, augmentation=False, aug_batch_size=32):              
+def data_generator(csv_data_file, image_folder_path, batch_size, epochs, use_empty_images=False, preprocessing=None, augmentation=False, aug_cycles=3, aug_batch_size=32):              
     """
-    Create generaor to flow data into fit process by batches. Also ImageDataGenerator can be applied to create new image-mask pairs
+    Yields the next data batch.
     """
-    labels_file = pd.read_csv(csv_data_file)
-    num_images = len(labels_file)
-    for i in range(epochs):
+    labels = get_masks(csv_data_file, use_empty_images)
+    num_images = len(labels)
+    try:
+        preprocess = sm.get_preprocessing(preprocessing)
+    except:
+        preprocess = None
+    for _ in range(epochs):
         for offset in range(0, num_images, batch_size):        
             # Get the samples you'll use in this batch
-            batch_images = labels_file['ImageId'][offset:offset+batch_size].values
-            batch_masks = labels_file['EncodedPixels'][offset:offset+batch_size].values
+            batch_images = labels['ImageId'][offset:offset+batch_size].values
+            batch_masks = labels['EncodedPixels'][offset:offset+batch_size].values
             # Initialise X_train and y_train arrays for this batch
             X_train = []
             y_train = []
@@ -76,28 +86,28 @@ def data_generator(csv_data_file, image_folder_path, batch_size, epochs, aug_ite
             if augmentation:
                 image_gen = ImageDataGenerator(horizontal_flip=True,
                                                vertical_flip=True,
-                                               width_shift_range=0.1,
-                                               height_shift_range=0.1
+                                               width_shift_range=0.2,
+                                               height_shift_range=0.2
                                                           )
                 mask_gen = ImageDataGenerator(horizontal_flip=True,
                                               vertical_flip=True,
-                                              width_shift_range=0.1,
-                                              height_shift_range=0.1
+                                              width_shift_range=0.2,
+                                              height_shift_range=0.2
                                                           )
                 image_gen.fit(X_train)
                 mask_gen.fit(y_train)
                 counter = 0
                 for X_aug_train, y_aug_train in zip(image_gen.flow(X_train, batch_size=aug_batch_size, seed=42), mask_gen.flow(y_train, batch_size=aug_batch_size, seed=42)):
-                    if counter == aug_iterations:
+                    if counter == aug_cycles:
                         counter = 0
                         break
                     counter += 1
-                    yield X_aug_train, y_aug_train
+                    yield (X_aug_train, y_aug_train) if preprocessing is None else (preprocess(X_aug_train), y_aug_train)
             else:
-                yield X_train, y_train
+                yield (X_train, y_train) if preprocessing is None else (preprocess(X_train), y_train)
                 # yield the next training batch
 
-def unet_model(input_size=(256,256,3)):
+def baseline_unet(input_size=(256,256,3)):
     """Initializing u-net model"""
     inputs = Input(input_size)
     # upsampling
